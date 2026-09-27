@@ -1,0 +1,5 @@
+import { useState } from 'react'
+import { works } from '../data/mock'
+import { WorkCard } from '../components/WorkCard'
+
+export function Discover() { const [filter, setFilter] = useState('All'); const categories = ['All', ...new Set(works.map(w => w.category))]; const visible = works.filter(w => w.status === 'approved' && (filter === 'All' || w.category === filter)); return <section className="mx-auto max-w-7xl px-5 py-16"><p className="text-sm font-bold uppercase tracking-widest text-indigo-600">Discover</p><h1 className="mt-2 text-5xl font-black">Student work</h1><p className="mt-4 max-w-2xl text-lg text-zinc-600">A future recommendation feed can prioritize recent work and eventually use interactions such as views, likes, and comments.</p><div className="my-8 flex flex-wrap gap-2">{categories.map(c => <button key={c} onClick={() => setFilter(c)} className={`rounded-full px-4 py-2 text-sm font-semibold ${filter === c ? 'bg-zinc-950 text-white' : 'bg-zinc-100'}`}>{c}</button>)}</div><div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">{visible.map(w => <WorkCard key={w.id} work={w} />)}</div></section> }
