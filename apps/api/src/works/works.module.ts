@@ -1,12 +1,12 @@
-import { Controller, Get, Module } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 
-@Controller('works')
-class WorksController {
-  @Get()
-  listWorks() {
-    return { message: 'Works API placeholder — connect Prisma next.' }
-  }
-}
+import { WorksController } from './works.controller'
+import { WorksService } from './works.service'
+import { PrismaModule } from '../prisma/prisma.module'
 
-@Module({ controllers: [WorksController] })
+@Module({
+  imports: [PrismaModule],
+  controllers: [WorksController],
+  providers: [WorksService],
+})
 export class WorksModule {}

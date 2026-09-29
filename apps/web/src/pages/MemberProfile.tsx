@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import type { Work } from '../data/mock'
+import { WorkCard } from '../components/WorkCard'
 
 type Member = {
   id: string
@@ -15,8 +17,11 @@ export function MemberProfile() {
   const { memberId } = useParams()
 
   const [member, setMember] = useState<Member | null>(null)
+  const [portfolio, setPortfolio] = useState<Work[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isPortfolioLoading, setIsPortfolioLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [portfolioError, setPortfolioError] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
@@ -26,6 +31,7 @@ export function MemberProfile() {
       if (!memberId) {
         setNotFound(true)
         setIsLoading(false)
+        setIsPortfolioLoading(false)
         return
       }
 
@@ -47,9 +53,7 @@ export function MemberProfile() {
         const data: Member = await response.json()
         setMember(data)
       } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') {
-          return
-        }
+        if (err instanceof Error && err.name === 'AbortError') return
 
         setError(
           err instanceof Error
@@ -63,7 +67,38 @@ export function MemberProfile() {
       }
     }
 
+    async function fetchPortfolio() {
+      if (!memberId) return
+
+      try {
+        const response = await fetch(
+          `http://localhost:3000/api/members/${encodeURIComponent(memberId)}/works`,
+          { signal: controller.signal },
+        )
+
+        if (!response.ok) {
+          throw new Error(`Request failed with status ${response.status}`)
+        }
+
+        const data: Work[] = await response.json()
+        setPortfolio(data)
+      } catch (err) {
+        if (err instanceof Error && err.name === 'AbortError') return
+
+        setPortfolioError(
+          err instanceof Error
+            ? err.message
+            : 'An unexpected error occurred.',
+        )
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsPortfolioLoading(false)
+        }
+      }
+    }
+
     fetchMember()
+    fetchPortfolio()
 
     return () => controller.abort()
   }, [memberId])
@@ -145,9 +180,30 @@ export function MemberProfile() {
 
       <div className="mt-16">
         <h2 className="mb-6 text-3xl font-black">Portfolio</h2>
-        <p className="text-zinc-500">
-          This member has not published any work yet.
-        </p>
+
+        {isPortfolioLoading && (
+          <p className="text-zinc-500">Loading portfolio...</p>
+        )}
+
+        {portfolioError && (
+          <p className="text-red-700">
+            Unable to load portfolio: {portfolioError}
+          </p>
+        )}
+
+        {!isPortfolioLoading && !portfolioError && portfolio.length === 0 && (
+          <p className="text-zinc-500">
+            This member has not published any work yet.
+          </p>
+        )}
+
+        {!isPortfolioLoading && !portfolioError && portfolio.length > 0 && (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {portfolio.map((work) => (
+              <WorkCard key={work.id} work={work} />
+            ))}
+          </div>
+        )}
       </div>
     </section>
   )
