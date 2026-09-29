@@ -1,17 +1,12 @@
-import { Controller, Get, Module, Patch } from '@nestjs/common'
+import { Module } from '@nestjs/common'
+import { AuthModule } from '../auth/auth.module'
+import { PrismaModule } from '../prisma/prisma.module'
+import { ModerationController } from './moderation.controller'
+import { ModerationService } from './moderation.service'
 
-@Controller('moderation')
-class ModerationController {
-  @Get('queue')
-  getQueue() {
-    return { message: 'Moderation queue placeholder.' }
-  }
-
-  @Patch(':workId/approve')
-  approve() {
-    return { message: 'Approval endpoint placeholder.' }
-  }
-}
-
-@Module({ controllers: [ModerationController] })
+@Module({
+  imports: [AuthModule, PrismaModule],
+  controllers: [ModerationController],
+  providers: [ModerationService],
+})
 export class ModerationModule {}

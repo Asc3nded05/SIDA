@@ -23,12 +23,15 @@ export class AuthController {
 
     @UseGuards(AuthGuard('jwt'))
     @Get('me')
-    getCurrentMember(@CurrentMember() member: {
+    getCurrentMember(
+    @CurrentMember()
+    member: {
         memberId: string
         email: string
         role: 'MEMBER' | 'LEADERSHIP'
-    }) {
-        return member
+    },
+    ) {
+        return this.authService.getCurrentMember(member.memberId)
     }
 
     @UseGuards(AuthGuard('jwt'))

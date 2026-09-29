@@ -1,4 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common'
+import { 
+    Injectable,
+    UnauthorizedException,
+    NotFoundException 
+} from '@nestjs/common'
 import { JwtService } from '@nestjs/jwt'
 import { compare } from 'bcryptjs'
 import { PrismaService } from '../prisma/prisma.service'
@@ -53,6 +57,28 @@ export class AuthService {
             profileImage: member.profileImage,
         },
         }
+    }
+
+    async getCurrentMember(memberId: string) {
+        const member = await this.prisma.member.findUnique({
+            where: { id: memberId },
+            select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            title: true,
+            bio: true,
+            disciplines: true,
+            profileImage: true,
+            },
+        })
+
+        if (!member) {
+            throw new UnauthorizedException('Member account no longer exists.')
+        }
+
+        return member
     }
 
     async updateProfile(memberId: string, updateProfileDto: UpdateProfileDto) {
