@@ -1,12 +1,12 @@
-import { Controller, Get, Module } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 
-@Controller('members')
-class MembersController {
-  @Get()
-  listMembers() {
-    return { message: 'Member API placeholder — connect Prisma next.' }
-  }
-}
+import { MembersController } from './members.controller'
+import { MembersService } from './members.service'
+import { PrismaModule } from '../prisma/prisma.module'
 
-@Module({ controllers: [MembersController] })
+@Module({
+    imports: [PrismaModule],
+    controllers: [MembersController],
+    providers: [MembersService],
+})
 export class MembersModule {}

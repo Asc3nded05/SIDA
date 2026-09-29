@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: sida-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: sida
+    ports:
+      - "5432:5432"
+    volumes:
+      - sida-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  sida-postgres-data:
