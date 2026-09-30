@@ -26,6 +26,14 @@ type WorkForm = {
   thumbnailUrl: string
 }
 
+type ProfileForm = {
+  name: string
+  title: string
+  bio: string
+  disciplines: string
+  profileImage: string
+}
+
 const emptyForm: WorkForm = {
   title: '',
   description: '',
@@ -35,7 +43,7 @@ const emptyForm: WorkForm = {
 }
 
 export function Dashboard() {
-  const { member, accessToken, logout } = useAuth()
+  const { member, accessToken, logout, updateMember } = useAuth()
   const navigate = useNavigate()
 
   const [works, setWorks] = useState<MemberWork[]>([])
@@ -45,6 +53,17 @@ export function Dashboard() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [showProfileForm, setShowProfileForm] = useState(false)
+  const [profileForm, setProfileForm] = useState<ProfileForm>({
+    name: '',
+    title: '',
+    bio: '',
+    disciplines: '',
+    profileImage: '',
+  })
+  const [isSavingProfile, setIsSavingProfile] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [profileSuccess, setProfileSuccess] = useState<string | null>(null)
 
   useEffect(() => {
     async function loadWorks() {
@@ -80,6 +99,87 @@ export function Dashboard() {
 
     loadWorks()
   }, [accessToken])
+
+  useEffect(() => {
+    if (!member) return
+
+    setProfileForm({
+      name: member.name,
+      title: member.title || '',
+      bio: member.bio || '',
+      disciplines: member.disciplines.join(', '),
+      profileImage: member.profileImage || '',
+    })
+  }, [member])
+
+  function updateProfileForm(field: keyof ProfileForm, value: string) {
+    setProfileForm((current) => ({
+      ...current,
+      [field]: value,
+    }))
+  }
+
+  async function handleProfileSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    if (!accessToken) {
+      setProfileError('You must be logged in to update your profile.')
+      return
+    }
+
+    setIsSavingProfile(true)
+    setProfileError(null)
+    setProfileSuccess(null)
+
+    try {
+      const response = await fetch(`${API_URL}/auth/me`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          name: profileForm.name.trim(),
+          title: profileForm.title.trim() || null,
+          bio: profileForm.bio.trim() || null,
+          disciplines: profileForm.disciplines
+            .split(',')
+            .map((discipline) => discipline.trim())
+            .filter(Boolean),
+          profileImage: profileForm.profileImage.trim() || null,
+        }),
+      })
+
+      if (!response.ok) {
+        const responseBody = await response.json().catch(() => null)
+        const message = Array.isArray(responseBody?.message)
+          ? responseBody.message.join(' ')
+          : responseBody?.message
+
+        throw new Error(
+          message || `Unable to update your profile (${response.status}).`,
+        )
+      }
+
+      const updatedMember: typeof member = await response.json()
+
+      if (!updatedMember) {
+        throw new Error('The server returned an invalid profile.')
+      }
+
+      updateMember(updatedMember)
+      setProfileSuccess('Your profile has been updated.')
+      setShowProfileForm(false)
+    } catch (err) {
+      setProfileError(
+        err instanceof Error
+          ? err.message
+          : 'An unexpected error occurred while updating your profile.',
+      )
+    } finally {
+      setIsSavingProfile(false)
+    }
+  }
 
   function handleLogout() {
     logout()
@@ -180,14 +280,30 @@ export function Dashboard() {
       </div>
 
       <div className="mt-10 grid gap-6 md:grid-cols-3">
-        <Card
-          title="Profile"
-          text="Edit your public bio, contact details, disciplines, and profile image."
-        />
+        <div className="rounded-2xl border border-zinc-200 bg-white p-6">
+          <h2 className="text-xl font-black">Profile</h2>
+          <p className="mt-2 text-sm leading-6 text-zinc-600">
+            Edit the information displayed on your public member profile.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowProfileForm((current) => !current)
+              setProfileError(null)
+              setProfileSuccess(null)
+            }}
+            className="mt-4 rounded-lg bg-zinc-950 px-4 py-2 text-sm font-bold text-white"
+          >
+            {showProfileForm ? 'Cancel' : 'Edit profile'}
+          </button>
+        </div>
+
         <Card
           title="Portfolio"
           text="Submit new work for leadership review before it becomes public."
         />
+
         <Card
           title="Status"
           text={`${works.length} portfolio ${
@@ -195,6 +311,168 @@ export function Dashboard() {
           } associated with your account.`}
         />
       </div>
+
+      {showProfileForm && (
+        <form
+          onSubmit={handleProfileSubmit}
+          className="mt-8 space-y-5 rounded-2xl border border-zinc-200 bg-white p-6"
+        >
+          <div>
+            <h2 className="text-2xl font-black">Edit your profile</h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              These details appear on your public SIDA member profile.
+            </p>
+          </div>
+
+          {profileError && (
+            <div
+              role="alert"
+              className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+            >
+              {profileError}
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="profile-name" className="mb-1 block text-sm font-semibold">
+              Name
+            </label>
+            <input
+              id="profile-name"
+              required
+              maxLength={120}
+              value={profileForm.name}
+              onChange={(event) => updateProfileForm('name', event.target.value)}
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="profile-title" className="mb-1 block text-sm font-semibold">
+              Title
+            </label>
+            <input
+              id="profile-title"
+              maxLength={120}
+              placeholder="e.g. Graphic Designer"
+              value={profileForm.title}
+              onChange={(event) => updateProfileForm('title', event.target.value)}
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label htmlFor="profile-bio" className="mb-1 block text-sm font-semibold">
+              Bio
+            </label>
+            <textarea
+              id="profile-bio"
+              rows={5}
+              maxLength={2000}
+              value={profileForm.bio}
+              onChange={(event) => updateProfileForm('bio', event.target.value)}
+              className="w-full resize-y rounded-lg border border-zinc-300 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="profile-disciplines"
+              className="mb-1 block text-sm font-semibold"
+            >
+              Disciplines
+            </label>
+            <input
+              id="profile-disciplines"
+              placeholder="Graphic Design, Motion Design, Web Design"
+              value={profileForm.disciplines}
+              onChange={(event) =>
+                updateProfileForm('disciplines', event.target.value)
+              }
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              Separate each discipline with a comma.
+            </p>
+          </div>
+
+          <div>
+            <label
+              htmlFor="profile-image"
+              className="mb-1 block text-sm font-semibold"
+            >
+              Profile image URL
+            </label>
+            <input
+              id="profile-image"
+              type="url"
+              placeholder="https://..."
+              value={profileForm.profileImage}
+              onChange={(event) =>
+                updateProfileForm('profileImage', event.target.value)
+              }
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2"
+            />
+            <p className="mt-1 text-xs text-zinc-500">
+              Use a publicly accessible image URL.
+            </p>
+          </div>
+
+          {profileForm.profileImage && (
+            <div>
+              <p className="mb-2 text-sm font-semibold">Image preview</p>
+              <img
+                src={profileForm.profileImage}
+                alt="Profile preview"
+                className="h-24 w-24 rounded-full border border-zinc-200 object-cover"
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none'
+                }}
+              />
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="submit"
+              disabled={isSavingProfile}
+              className="rounded-lg bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSavingProfile ? 'Saving...' : 'Save profile'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (!member) return
+
+                setProfileForm({
+                  name: member.name,
+                  title: member.title || '',
+                  bio: member.bio || '',
+                  disciplines: member.disciplines.join(', '),
+                  profileImage: member.profileImage || '',
+                })
+                setProfileError(null)
+                setProfileSuccess(null)
+                setShowProfileForm(false)
+              }}
+              className="rounded-lg border border-zinc-300 px-5 py-2.5 text-sm font-semibold"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
+      {profileSuccess && (
+        <p
+          role="status"
+          className="mt-4 rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-700"
+        >
+          {profileSuccess}
+        </p>
+      )}
 
       <div className="mt-12 rounded-2xl border border-zinc-200 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">

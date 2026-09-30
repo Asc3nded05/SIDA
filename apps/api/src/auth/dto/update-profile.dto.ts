@@ -25,6 +25,11 @@ export class UpdateProfileDto {
   disciplines?: string[]
 
   @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  name?: string
+
+  @IsOptional()
   @IsUrl()
   profileImage?: string | null
 }
