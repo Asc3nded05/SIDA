@@ -1,12 +1,16 @@
 import { Module } from '@nestjs/common'
-
-import { WorksController } from './works.controller'
-import { WorksService } from './works.service'
+import { AuthModule } from '../auth/auth.module'
 import { PrismaModule } from '../prisma/prisma.module'
+import { WorksController } from './works.controller'
+import { WorkSubmissionController } from './work-submission.controller'
+import { WorksService } from './works.service'
 
 @Module({
-  imports: [PrismaModule],
-  controllers: [WorksController],
+  imports: [PrismaModule, AuthModule],
+  controllers: [
+    WorksController,
+    WorkSubmissionController,
+  ],
   providers: [WorksService],
 })
 export class WorksModule {}

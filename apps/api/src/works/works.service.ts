@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common'
-
+import { CreateWorkDto } from './dto/create-work.dto'
 import { PrismaService } from '../prisma/prisma.service'
 
 @Injectable()
@@ -49,5 +49,52 @@ export class WorksService {
       memberId,
       memberName: work.member.name,
     }))
+  }
+
+  async findMine(memberId: string) {
+    return this.prisma.work.findMany({
+      where: { memberId },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        category: true,
+        mediaUrl: true,
+        thumbnailUrl: true,
+        status: true,
+        reviewedAt: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+  }
+
+  async createForMember(
+    memberId: string,
+    createWorkDto: CreateWorkDto,
+  ) {
+    return this.prisma.work.create({
+      data: {
+        memberId,
+        title: createWorkDto.title,
+        description: createWorkDto.description,
+        category: createWorkDto.category,
+        mediaUrl: createWorkDto.mediaUrl,
+        thumbnailUrl: createWorkDto.thumbnailUrl,
+        status: 'PENDING',
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        category: true,
+        mediaUrl: true,
+        thumbnailUrl: true,
+        status: true,
+        createdAt: true,
+      },
+    })
   }
 }
