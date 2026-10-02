@@ -1,17 +1,14 @@
-import { Body, Controller, Get, Module, Post } from '@nestjs/common'
+import { Module } from '@nestjs/common'
 
-@Controller('commissions')
-class CommissionsController {
-  @Get()
-  listCommissions() {
-    return { message: 'Leadership commission queue placeholder.' }
-  }
+import { AuthModule } from '../auth/auth.module'
+import { PrismaModule } from '../prisma/prisma.module'
 
-  @Post()
-  createCommission(@Body() body: Record<string, unknown>) {
-    return { message: 'Commission accepted by demo API.', data: body }
-  }
-}
+import { CommissionsController } from './commissions.controller'
+import { CommissionsService } from './commissions.service'
 
-@Module({ controllers: [CommissionsController] })
+@Module({
+  imports: [AuthModule, PrismaModule],
+  controllers: [CommissionsController],
+  providers: [CommissionsService],
+})
 export class CommissionsModule {}

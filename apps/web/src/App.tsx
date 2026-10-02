@@ -11,6 +11,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Moderation } from './pages/Moderation'
 import { CreateMember } from './pages/CreateMember'
 import { Discover } from './pages/Discover'
+import { CommissionManagement } from './pages/CommissionManagement'
 
 const nav = [
   ['/', 'Home'],
@@ -21,8 +22,6 @@ const nav = [
 
 export default function App() {
   const { member, logout } = useAuth()
-
-  console.log('Current authenticated member:', member)
 
   return (
     <div className="min-h-screen bg-zinc-50 text-zinc-950">
@@ -48,8 +47,30 @@ export default function App() {
             ))}
             
             {member?.role === 'LEADERSHIP' && (
-              <NavLink to="/leadership/moderation">Moderation</NavLink>
-            )}
+            <>
+              <NavLink
+                to="/leadership/moderation"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'text-indigo-600'
+                    : 'text-zinc-600 hover:text-zinc-950'
+                }
+              >
+                Moderation
+              </NavLink>
+
+              <NavLink
+                to="/leadership/commissions"
+                className={({ isActive }) =>
+                  isActive
+                    ? 'text-indigo-600'
+                    : 'text-zinc-600 hover:text-zinc-950'
+                }
+              >
+                Commissions
+              </NavLink>
+            </>
+          )}
           </nav>
 
           {member ? (
@@ -98,6 +119,7 @@ export default function App() {
           {/* Leadership only */}
           <Route element={<ProtectedRoute requiredRole="LEADERSHIP" />}>
             <Route path="/leadership/moderation" element={<Moderation />} />
+            <Route path="/leadership/commissions" element={<CommissionManagement />} />
             <Route path="/leadership/members/new" element={<CreateMember />} />
           </Route>
 
