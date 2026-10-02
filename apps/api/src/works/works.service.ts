@@ -6,6 +6,41 @@ import { PrismaService } from '../prisma/prisma.service'
 export class WorksService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async findAllApproved() {
+    const works = await this.prisma.work.findMany({
+      where: {
+        status: 'APPROVED',
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        category: true,
+        mediaUrl: true,
+        thumbnailUrl: true,
+        memberId: true,
+        member: {
+          select: {
+            name: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    })
+
+    return works.map((work) => ({
+      id: work.id,
+      title: work.title,
+      description: work.description ?? '',
+      category: work.category,
+      image: work.thumbnailUrl || work.mediaUrl,
+      memberId: work.memberId,
+      memberName: work.member.name,
+    }))
+  }
+
   async findApprovedForMember(memberId: string) {
     const member = await this.prisma.member.findUnique({
       where: { id: memberId },
