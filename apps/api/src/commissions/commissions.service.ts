@@ -1,10 +1,21 @@
-import { 
+import {
   Injectable,
-  NotFoundException
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
 } from '@nestjs/common'
 import { PrismaService } from '../prisma/prisma.service'
 import { CreateCommissionDto } from './dto/create-commission.dto'
-import { CommissionStatus } from './dto/update-commission-status.dto'
+import { CommissionStatus } from '@prisma/client'
+
+const ALLOWED_TRANSITIONS: Record<CommissionStatus, CommissionStatus[]> = {
+  SUBMITTED: ['REVIEWING', 'DECLINED'],
+  REVIEWING: ['MATCHED', 'DECLINED'],
+  MATCHED: ['IN_PROGRESS', 'DECLINED'],
+  IN_PROGRESS: ['COMPLETED'],
+  COMPLETED: [],
+  DECLINED: [],
+}
 
 @Injectable()
 export class CommissionsService {
@@ -54,17 +65,37 @@ export class CommissionsService {
     })
   }
 
-  async updateStatus(
-    id: string,
-    status: CommissionStatus,
-  ) {
-    const result = await this.prisma.commissionRequest.updateMany({
+  async updateStatus(id: string, status: CommissionStatus) {
+    const request = await this.prisma.commissionRequest.findUnique({
       where: { id },
+      select: {
+        id: true,
+        status: true,
+      },
+    })
+
+    if (!request) {
+      throw new NotFoundException('Commission request not found.')
+    }
+
+    if (!ALLOWED_TRANSITIONS[request.status as CommissionStatus].includes(status)) {
+      throw new BadRequestException(
+        `A request cannot move from ${request.status} to ${status}.`,
+      )
+    }
+
+    const result = await this.prisma.commissionRequest.updateMany({
+      where: {
+        id,
+        status: request.status,
+      },
       data: { status },
     })
 
     if (result.count === 0) {
-      throw new NotFoundException('Commission request not found.')
+      throw new ConflictException(
+        'This request was updated by someone else. Refresh and try again.',
+      )
     }
 
     return this.prisma.commissionRequest.findUnique({

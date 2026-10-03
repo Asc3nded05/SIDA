@@ -14,6 +14,15 @@ const COMMISSION_STATUSES = [
 
 type CommissionStatus = (typeof COMMISSION_STATUSES)[number]
 
+const ALLOWED_TRANSITIONS: Record<CommissionStatus, CommissionStatus[]> = {
+  SUBMITTED: ['REVIEWING', 'DECLINED'],
+  REVIEWING: ['MATCHED', 'DECLINED'],
+  MATCHED: ['IN_PROGRESS', 'DECLINED'],
+  IN_PROGRESS: ['COMPLETED'],
+  COMPLETED: [],
+  DECLINED: [],
+}
+
 type CommissionRequest = {
   id: string
   title: string
@@ -31,6 +40,10 @@ type CommissionRequest = {
 
 function formatStatus(status: CommissionStatus) {
   return status.replace('_', ' ')
+}
+
+function getAvailableStatuses(status: CommissionStatus) {
+  return [status, ...ALLOWED_TRANSITIONS[status]]
 }
 
 export function CommissionManagement() {
@@ -184,19 +197,27 @@ export function CommissionManagement() {
                   </span>
                   <select
                     value={request.status}
-                    disabled={processingId !== null}
-                    onChange={(event) =>
-                      updateStatus(
-                        request.id,
-                        event.target.value as CommissionStatus,
-                      )
+                    disabled={
+                        processingId !== null ||
+                        ALLOWED_TRANSITIONS[request.status].length === 0
                     }
+                    onChange={(event) => {
+                        const nextStatus = event.target.value as CommissionStatus
+
+                        if (
+                        window.confirm(
+                            `Change this request from ${formatStatus(request.status)} to ${formatStatus(nextStatus)}?`,
+                        )
+                        ) {
+                        updateStatus(request.id, nextStatus)
+                        }
+                    }}
                     className="w-full rounded-lg border border-zinc-300 px-3 py-2 disabled:opacity-50"
-                  >
-                    {COMMISSION_STATUSES.map((status) => (
-                      <option key={status} value={status}>
+                    >
+                    {getAvailableStatuses(request.status).map((status) => (
+                        <option key={status} value={status}>
                         {formatStatus(status)}
-                      </option>
+                        </option>
                     ))}
                   </select>
                   {processingId === request.id && (
