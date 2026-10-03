@@ -28,4 +28,9 @@ export class CreateWorkDto {
   @IsOptional()
   @IsUrl({ require_protocol: true })
   thumbnailUrl?: string
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  commissionRequestId?: string
 }

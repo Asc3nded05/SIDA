@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import { 
+  Injectable,
+  NotFoundException, 
+  ForbiddenException
+} from '@nestjs/common'
 import { CreateWorkDto } from './dto/create-work.dto'
 import { PrismaService } from '../prisma/prisma.service'
 
@@ -110,6 +114,24 @@ export class WorksService {
     memberId: string,
     createWorkDto: CreateWorkDto,
   ) {
+    if (createWorkDto.commissionRequestId) {
+      const assignment =
+        await this.prisma.commissionAssignment.findUnique({
+          where: {
+            commissionRequestId_memberId: {
+              commissionRequestId: createWorkDto.commissionRequestId,
+              memberId,
+            },
+          },
+        })
+
+      if (!assignment) {
+        throw new ForbiddenException(
+          'You are not assigned to this commission',
+        )
+      }
+    }
+
     return this.prisma.work.create({
       data: {
         memberId,
@@ -118,6 +140,7 @@ export class WorksService {
         category: createWorkDto.category,
         mediaUrl: createWorkDto.mediaUrl,
         thumbnailUrl: createWorkDto.thumbnailUrl,
+        commissionRequestId: createWorkDto.commissionRequestId,
         status: 'PENDING',
       },
       select: {
@@ -127,6 +150,7 @@ export class WorksService {
         category: true,
         mediaUrl: true,
         thumbnailUrl: true,
+        commissionRequestId: true,
         status: true,
         createdAt: true,
       },

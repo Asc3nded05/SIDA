@@ -43,21 +43,24 @@ model Member {
 }
 
 model Work {
-  id           String     @id @default(cuid())
-  memberId     String
-  member       Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
-  title        String
-  description  String?
-  category     String
-  mediaUrl     String
-  thumbnailUrl String?
-  status       WorkStatus @default(PENDING)
-  reviewedAt   DateTime?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  comments     Comment[]
+  id                 String     @id @default(cuid())
+  memberId           String
+  member             Member     @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  commissionRequestId String?
+  commissionRequest  CommissionRequest? @relation(fields: [commissionRequestId], references: [id], onDelete: SetNull)
+  title              String
+  description        String?
+  category           String
+  mediaUrl           String
+  thumbnailUrl       String?
+  status             WorkStatus @default(PENDING)
+  reviewedAt         DateTime?
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  comments           Comment[]
 
   @@index([memberId])
+  @@index([commissionRequestId])
   @@index([status, createdAt])
 }
 
@@ -71,7 +74,8 @@ model CommissionRequest {
   category     String
   timeline     String?
   dueDate      DateTime?
-  assignments CommissionAssignment[]
+  assignments  CommissionAssignment[]
+  works        Work[]
   status       CommissionStatus @default(SUBMITTED)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt

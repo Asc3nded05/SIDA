@@ -79,6 +79,7 @@ export function Dashboard() {
   >([])
   const [isLoadingCommissions, setIsLoadingCommissions] = useState(true)
   const [commissionError, setCommissionError] = useState<string | null>(null)
+  const [selectedCommissionId, setSelectedCommissionId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<WorkForm>(emptyForm)
@@ -262,6 +263,25 @@ export function Dashboard() {
     }))
   }
 
+  function handleStartCommissionWork(commission: AssignedCommission['commissionRequest']) {
+    setSelectedCommissionId(commission.id)
+    setForm({
+      ...emptyForm,
+      title: commission.title,
+      category: commission.category,
+    })
+    setShowForm(true)
+    setError(null)
+    setSuccess(null)
+  }
+
+  function handleCloseWorkForm() {
+    setShowForm(false)
+    setSelectedCommissionId(null)
+    setForm(emptyForm)
+    setError(null)
+  }
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
@@ -287,6 +307,9 @@ export function Dashboard() {
           category: form.category,
           mediaUrl: form.mediaUrl,
           thumbnailUrl: form.thumbnailUrl || undefined,
+          ...(selectedCommissionId
+            ? { commissionRequestId: selectedCommissionId }
+            : {}),
         }),
       })
 
@@ -305,6 +328,7 @@ export function Dashboard() {
 
       setWorks((current) => [newWork, ...current])
       setForm(emptyForm)
+      setSelectedCommissionId(null)
       setShowForm(false)
       setSuccess('Your work has been submitted for leadership review.')
     } catch (err) {
@@ -481,6 +505,16 @@ export function Dashboard() {
                 <p className="mt-3 text-xs text-zinc-500">
                   Assigned {new Date(assignedAt).toLocaleDateString()}
                 </p>
+
+                {['MATCHED', 'IN_PROGRESS'].includes(commissionRequest.status) && (
+                  <button
+                    type="button"
+                    onClick={() => handleStartCommissionWork(commissionRequest)}
+                    className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-bold text-white hover:bg-indigo-700"
+                  >
+                    Submit work for this commission
+                  </button>
+                )}
               </article>
             ))
           )}
@@ -661,25 +695,22 @@ export function Dashboard() {
           <button
             type="button"
             onClick={() => {
-              setShowForm((current) => !current)
-              setError(null)
-              setSuccess(null)
+              if (showForm) {
+                handleCloseWorkForm()
+              } else {
+                setSelectedCommissionId(null)
+                setForm(emptyForm)
+                setShowForm(true)
+                setError(null)
+                setSuccess(null)
+              }
             }}
             className="rounded-lg bg-zinc-950 px-4 py-2 text-sm font-bold text-white"
           >
             {showForm ? 'Cancel' : '+ New Work'}
           </button>
         </div>
-
-        {error && (
-          <div
-            role="alert"
-            className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
-          >
-            {error}
-          </div>
-        )}
-
+        
         {success && (
           <div
             role="status"
@@ -687,120 +718,6 @@ export function Dashboard() {
           >
             {success}
           </div>
-        )}
-
-        {showForm && (
-          <form
-            onSubmit={handleSubmit}
-            className="mt-6 space-y-5 rounded-xl border border-zinc-200 bg-zinc-50 p-5"
-          >
-            <h3 className="text-xl font-bold">Submit new work</h3>
-
-            <div>
-              <label
-                htmlFor="work-title"
-                className="mb-1 block text-sm font-semibold"
-              >
-                Title
-              </label>
-              <input
-                id="work-title"
-                required
-                maxLength={120}
-                value={form.title}
-                onChange={(event) => updateForm('title', event.target.value)}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="work-category"
-                className="mb-1 block text-sm font-semibold"
-              >
-                Category
-              </label>
-              <input
-                id="work-category"
-                required
-                maxLength={80}
-                placeholder="e.g. Graphic Design, Motion Design, Web Design"
-                value={form.category}
-                onChange={(event) => updateForm('category', event.target.value)}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="work-description"
-                className="mb-1 block text-sm font-semibold"
-              >
-                Description <span className="font-normal text-zinc-500">(optional)</span>
-              </label>
-              <textarea
-                id="work-description"
-                rows={4}
-                maxLength={2000}
-                value={form.description}
-                onChange={(event) =>
-                  updateForm('description', event.target.value)
-                }
-                className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2"
-              />
-            </div>
-
-            <div>
-              <label
-                htmlFor="work-media-url"
-                className="mb-1 block text-sm font-semibold"
-              >
-                Media URL
-              </label>
-              <input
-                id="work-media-url"
-                type="url"
-                required
-                placeholder="https://..."
-                value={form.mediaUrl}
-                onChange={(event) => updateForm('mediaUrl', event.target.value)}
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
-              />
-              <p className="mt-1 text-xs text-zinc-500">
-                Link to the image or video you want to submit.
-              </p>
-            </div>
-
-            <div>
-              <label
-                htmlFor="work-thumbnail-url"
-                className="mb-1 block text-sm font-semibold"
-              >
-                Thumbnail URL <span className="font-normal text-zinc-500">(optional)</span>
-              </label>
-              <input
-                id="work-thumbnail-url"
-                type="url"
-                placeholder="https://..."
-                value={form.thumbnailUrl}
-                onChange={(event) =>
-                  updateForm('thumbnailUrl', event.target.value)
-                }
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
-              />
-              <p className="mt-1 text-xs text-zinc-500">
-                A preview image for the submission. Video submissions can use a separate thumbnail.
-              </p>
-            </div>
-
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="rounded-lg bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isSubmitting ? 'Submitting...' : 'Submit for review'}
-            </button>
-          </form>
         )}
 
         <div className="mt-6 space-y-3">
@@ -827,6 +744,169 @@ export function Dashboard() {
           )}
         </div>
       </div>
+
+      {showForm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => {
+              if (!isSubmitting) handleCloseWorkForm()
+            }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="work-form-title"
+            className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 id="work-form-title" className="text-2xl font-black">
+                  {selectedCommissionId
+                    ? 'Submit work for assigned commission'
+                    : 'Submit new work'}
+                </h2>
+
+                {selectedCommissionId && (
+                  <p className="mt-1 text-sm text-zinc-600">
+                    This submission will be linked to your assigned commission. It will
+                    still be sent to leadership for review.
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCloseWorkForm}
+                aria-label="Close submission form"
+                disabled={isSubmitting}
+                className="rounded-lg border border-zinc-300 px-3 py-1 text-xl leading-none hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                ×
+              </button>
+            </div>
+
+            {error && (
+              <div
+                role="alert"
+                className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+              >
+                {error}
+              </div>
+            )}
+
+            <form
+              onSubmit={handleSubmit}
+              className="mt-6 space-y-5 rounded-xl border border-zinc-200 bg-zinc-50 p-5"
+            >
+              <div>
+                <label
+                  htmlFor="work-title"
+                  className="mb-1 block text-sm font-semibold"
+                >
+                  Title
+                </label>
+                <input
+                  id="work-title"
+                  required
+                  maxLength={120}
+                  value={form.title}
+                  onChange={(event) => updateForm('title', event.target.value)}
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="work-category"
+                  className="mb-1 block text-sm font-semibold"
+                >
+                  Category
+                </label>
+                <input
+                  id="work-category"
+                  required
+                  maxLength={80}
+                  placeholder="e.g. Graphic Design, Motion Design, Web Design"
+                  value={form.category}
+                  onChange={(event) => updateForm('category', event.target.value)}
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="work-description"
+                  className="mb-1 block text-sm font-semibold"
+                >
+                  Description <span className="font-normal text-zinc-500">(optional)</span>
+                </label>
+                <textarea
+                  id="work-description"
+                  rows={4}
+                  maxLength={2000}
+                  value={form.description}
+                  onChange={(event) =>
+                    updateForm('description', event.target.value)
+                  }
+                  className="w-full resize-y rounded-lg border border-zinc-300 bg-white px-3 py-2"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="work-media-url"
+                  className="mb-1 block text-sm font-semibold"
+                >
+                  Media URL
+                </label>
+                <input
+                  id="work-media-url"
+                  type="url"
+                  required
+                  placeholder="https://..."
+                  value={form.mediaUrl}
+                  onChange={(event) => updateForm('mediaUrl', event.target.value)}
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
+                />
+                <p className="mt-1 text-xs text-zinc-500">
+                  Link to the image or video you want to submit.
+                </p>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="work-thumbnail-url"
+                  className="mb-1 block text-sm font-semibold"
+                >
+                  Thumbnail URL <span className="font-normal text-zinc-500">(optional)</span>
+                </label>
+                <input
+                  id="work-thumbnail-url"
+                  type="url"
+                  placeholder="https://..."
+                  value={form.thumbnailUrl}
+                  onChange={(event) =>
+                    updateForm('thumbnailUrl', event.target.value)
+                  }
+                  className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2"
+                />
+                <p className="mt-1 text-xs text-zinc-500">
+                  A preview image for the submission. Video submissions can use a separate thumbnail.
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="rounded-lg bg-zinc-950 px-5 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit for review'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </section>
   )
 }
