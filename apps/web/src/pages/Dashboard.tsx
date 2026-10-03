@@ -18,6 +18,33 @@ type MemberWork = {
   createdAt: string
 }
 
+type CommissionStatus =
+  | 'SUBMITTED'
+  | 'REVIEWING'
+  | 'MATCHED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'DECLINED'
+
+type AssignedCommission = {
+  id: string
+  assignedAt: string
+  commissionRequest: {
+    id: string
+    title: string
+    description: string
+    requirements: string | null
+    contactName: string
+    contactEmail: string
+    category: string
+    timeline: string | null
+    dueDate: string | null
+    status: CommissionStatus
+    createdAt: string
+    updatedAt: string
+  }
+}
+
 type WorkForm = {
   title: string
   description: string
@@ -47,6 +74,11 @@ export function Dashboard() {
   const navigate = useNavigate()
 
   const [works, setWorks] = useState<MemberWork[]>([])
+  const [assignedCommissions, setAssignedCommissions] = useState<
+    AssignedCommission[]
+  >([])
+  const [isLoadingCommissions, setIsLoadingCommissions] = useState(true)
+  const [commissionError, setCommissionError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState<WorkForm>(emptyForm)
@@ -98,6 +130,43 @@ export function Dashboard() {
     }
 
     loadWorks()
+  }, [accessToken])
+
+  useEffect(() => {
+    async function loadAssignedCommissions() {
+      if (!accessToken) {
+        setIsLoadingCommissions(false)
+        setCommissionError('You must be logged in to view your assigned commissions.')
+        return
+      }
+
+      try {
+        const response = await fetch(`${API_URL}/commissions/assigned-to-me`, {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        })
+
+        if (!response.ok) {
+          throw new Error(
+            `Unable to load your assigned commissions (${response.status}).`,
+          )
+        }
+
+        const data: AssignedCommission[] = await response.json()
+        setAssignedCommissions(data)
+      } catch (err) {
+        setCommissionError(
+          err instanceof Error
+            ? err.message
+            : 'An unexpected error occurred while loading your assigned commissions.',
+        )
+      } finally {
+        setIsLoadingCommissions(false)
+      }
+    }
+
+    loadAssignedCommissions()
   }, [accessToken])
 
   useEffect(() => {
@@ -310,6 +379,112 @@ export function Dashboard() {
             works.length === 1 ? 'piece' : 'pieces'
           } associated with your account.`}
         />
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-zinc-200 bg-white p-6">
+        <div>
+          <h2 className="text-2xl font-black">Assigned commissions</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Commission requests that leadership has assigned to you.
+          </p>
+        </div>
+
+        {commissionError && (
+          <div
+            role="alert"
+            className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+          >
+            {commissionError}
+          </div>
+        )}
+
+        <div className="mt-6 space-y-4">
+          {isLoadingCommissions ? (
+            <p className="text-sm text-zinc-500">
+              Loading your assigned commissions...
+            </p>
+          ) : commissionError ? null : assignedCommissions.length === 0 ? (
+            <p className="rounded-xl bg-zinc-50 p-5 text-sm text-zinc-500">
+              You don’t have any assigned commissions yet.
+            </p>
+          ) : (
+            assignedCommissions.map(({ id, assignedAt, commissionRequest }) => (
+              <article
+                key={id}
+                className="rounded-xl border border-zinc-200 bg-zinc-50 p-5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h3 className="text-lg font-bold">
+                      {commissionRequest.title}
+                    </h3>
+                    <p className="mt-1 text-sm text-zinc-500">
+                      {commissionRequest.category}
+                    </p>
+                  </div>
+
+                  <CommissionStatusBadge status={commissionRequest.status} />
+                </div>
+
+                {commissionRequest.description && (
+                  <p className="mt-4 whitespace-pre-line text-sm leading-6 text-zinc-700">
+                    {commissionRequest.description}
+                  </p>
+                )}
+
+                {commissionRequest.requirements && (
+                  <div className="mt-4">
+                    <h4 className="text-sm font-bold">Requirements</h4>
+                    <p className="mt-1 whitespace-pre-line text-sm leading-6 text-zinc-600">
+                      {commissionRequest.requirements}
+                    </p>
+                  </div>
+                )}
+
+                <div className="mt-4 grid gap-3 border-t border-zinc-200 pt-4 text-sm sm:grid-cols-2">
+                  {commissionRequest.timeline && (
+                    <p>
+                      <span className="font-semibold">Timeline: </span>
+                      <span className="text-zinc-600">
+                        {commissionRequest.timeline}
+                      </span>
+                    </p>
+                  )}
+
+                  {commissionRequest.dueDate && (
+                    <p>
+                      <span className="font-semibold">Due date: </span>
+                      <span className="text-zinc-600">
+                        {new Date(commissionRequest.dueDate).toLocaleDateString()}
+                      </span>
+                    </p>
+                  )}
+
+                  <p>
+                    <span className="font-semibold">Contact: </span>
+                    <span className="text-zinc-600">
+                      {commissionRequest.contactName}
+                    </span>
+                  </p>
+
+                  <p>
+                    <span className="font-semibold">Email: </span>
+                    <a
+                      href={`mailto:${commissionRequest.contactEmail}`}
+                      className="text-indigo-600 underline underline-offset-2"
+                    >
+                      {commissionRequest.contactEmail}
+                    </a>
+                  </p>
+                </div>
+
+                <p className="mt-3 text-xs text-zinc-500">
+                  Assigned {new Date(assignedAt).toLocaleDateString()}
+                </p>
+              </article>
+            ))
+          )}
+        </div>
       </div>
 
       {showProfileForm && (
@@ -676,6 +851,38 @@ function StatusBadge({ status }: { status: WorkStatus }) {
     PENDING: 'Pending review',
     APPROVED: 'Approved',
     DENIED: 'Denied',
+  }
+
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-xs font-bold ${styles[status]}`}
+    >
+      {labels[status]}
+    </span>
+  )
+}
+
+function CommissionStatusBadge({
+  status,
+}: {
+  status: CommissionStatus
+}) {
+  const styles: Record<CommissionStatus, string> = {
+    SUBMITTED: 'bg-zinc-100 text-zinc-700',
+    REVIEWING: 'bg-amber-100 text-amber-800',
+    MATCHED: 'bg-indigo-100 text-indigo-800',
+    IN_PROGRESS: 'bg-blue-100 text-blue-800',
+    COMPLETED: 'bg-green-100 text-green-800',
+    DECLINED: 'bg-red-100 text-red-800',
+  }
+
+  const labels: Record<CommissionStatus, string> = {
+    SUBMITTED: 'Submitted',
+    REVIEWING: 'Under review',
+    MATCHED: 'Matched',
+    IN_PROGRESS: 'In progress',
+    COMPLETED: 'Completed',
+    DECLINED: 'Declined',
   }
 
   return (

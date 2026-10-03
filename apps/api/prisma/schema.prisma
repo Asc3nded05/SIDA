@@ -39,6 +39,7 @@ model Member {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   works        Work[]
+  commissionAssignments CommissionAssignment[]
 }
 
 model Work {
@@ -70,11 +71,25 @@ model CommissionRequest {
   category     String
   timeline     String?
   dueDate      DateTime?
+  assignments CommissionAssignment[]
   status       CommissionStatus @default(SUBMITTED)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
 
   @@index([status, createdAt])
+}
+
+model CommissionAssignment {
+  id                  String            @id @default(cuid())
+  commissionRequestId String
+  memberId            String
+  assignedAt          DateTime          @default(now())
+
+  commissionRequest CommissionRequest @relation(fields: [commissionRequestId], references: [id], onDelete: Cascade)
+  member            Member            @relation(fields: [memberId], references: [id], onDelete: Cascade)
+
+  @@unique([commissionRequestId, memberId])
+  @@index([memberId])
 }
 
 model Comment {
